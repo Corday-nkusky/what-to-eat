@@ -372,6 +372,7 @@
   var spinning = false;
   var currentRotation = 0;
   var toastTimer = null;
+  var storageWarned = false;
 
   function load() {
     try {
@@ -388,7 +389,14 @@
   }
 
   function save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(options)); } catch (e) {}
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify(options));
+    } catch (e) {
+      if (!storageWarned) {
+        toast('本机存储不可用，这次改动不会被保存');
+        storageWarned = true;
+      }
+    }
   }
 
   function hashOf(s) {
@@ -420,6 +428,7 @@
   function hideToast() { toastEl.classList.remove('show'); }
 
   function toast(msg, action) {
+    if (storageWarned) msg = msg + '（本机存储不可用，改动不会被保存）';
     toastEl.textContent = '';
     var span = document.createElement('span');
     span.textContent = msg;
@@ -602,14 +611,16 @@
   function removeOption(i) {
     if (spinning) { toast('转盘转完了再改选项吧'); return; }
     var name = options[i];
+    var before = options.slice();
     options.splice(i, 1);
+    var after = options.slice();
     save();
     renderAll();
     toast('已删除「' + name + '」', {
       label: '撤销',
       run: function () {
-        if (options.length >= MAX || options.indexOf(name) !== -1) { toast('没法恢复了，列表已经变了'); return; }
-        options.splice(Math.min(i, options.length), 0, name);
+        if (JSON.stringify(options) !== JSON.stringify(after)) { toast('列表已经变过了，没法直接恢复位置'); return; }
+        options = before.slice();
         save();
         renderAll();
         toast('已恢复「' + name + '」');
@@ -752,7 +763,7 @@
   input.addEventListener('keydown', function (e) { if (e.key === 'Enter') addOption(); });
 
   resetBtn.addEventListener('click', function () {
-    if (spinning) return;
+    if (spinning) { toast('转盘转完了再改选项吧'); return; }
     var backup = options.slice();
     if (JSON.stringify(backup) === JSON.stringify(DEFAULTS)) { toast('已经是默认选项了'); return; }
 
