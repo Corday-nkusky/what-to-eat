@@ -537,7 +537,11 @@
     var seg = 360 / n;
     var mid = index * seg + seg / 2;          // 目标扇区中心（从顶点顺时针）
     var turns = 5 + Math.floor(Math.random() * 2);
-    var target = turns * 360 + (360 - mid);   // 让目标中心转到顶部指针处
+    // 指针固定在顶部，需要「总旋转角 ≡ -mid (mod 360)」才能让目标扇区停在指针下。
+    // 必须在「当前已旋转的角度」基础上补差值 —— 否则从第二次抽取起就会整体错位。
+    var need = (360 - mid) % 360;
+    var cur = ((currentRotation % 360) + 360) % 360;
+    var target = turns * 360 + (((need - cur) % 360) + 360) % 360;
     currentRotation += target;
 
     wheel.classList.add('spinning');
