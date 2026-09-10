@@ -131,6 +131,18 @@
   .add-btn:active{transform:translateY(0)}
   .add-btn[disabled]{opacity:.5;cursor:not-allowed}
 
+  /* ---------- bulk import ---------- */
+  .bulk{margin-bottom:14px;animation:chipIn .22s ease}
+  .bulk[hidden]{display:none}
+  .bulk textarea{
+    width:100%;min-height:82px;resize:vertical;padding:10px 12px;line-height:1.6;
+    font-family:inherit;font-size:13px;color:var(--ink);
+    border:1px solid var(--line);border-radius:12px;background:#fafbfe;outline:none;
+    transition:border-color .18s, background .18s, box-shadow .18s;
+  }
+  .bulk textarea:focus{border-color:var(--brand);background:#fff;box-shadow:0 0 0 4px rgba(123,131,255,.12)}
+  .bulk-btns{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:8px}
+
   .chips{display:flex;flex-wrap:wrap;gap:8px}
   .chip{
     display:inline-flex;align-items:center;gap:7px;
@@ -233,6 +245,13 @@
     transition:opacity .25s ease, transform .25s ease;white-space:nowrap;
   }
   .toast.show{opacity:1;transform:translate(-50%,0)}
+  .toast{display:flex;align-items:center;gap:16px}
+  .toast-btn{
+    border:none;background:none;font-family:inherit;font-size:13px;font-weight:700;
+    color:#aab4ff;cursor:pointer;padding:2px 4px;border-radius:6px;white-space:nowrap;
+    transition:color .15s;
+  }
+  .toast-btn:hover{color:#c9cfff;text-decoration:underline}
 
   @media (max-width:420px){
     .head h1{font-size:26px}
@@ -267,7 +286,7 @@
     </div>
 
     <button class="cta" id="spinBtn" data-page-node-id="sjsjaPUQdxuHdRzHGyvBHd">开始抽取</button>
-    <p class="hint" id="hint" data-page-node-id="AtI8cIQe7AR0OXD8xqflfB">共 <b id="hintCount" data-page-node-id="kV4NwUlZf3TdwsWXj6sCnM">0</b> 个选项，转盘已就绪</p>
+    <p class="hint" id="hint" data-page-node-id="AtI8cIQe7AR0OXD8xqflfB">共 <b id="hintCount" data-page-node-id="kV4NwUlZf3TdwsWXj6sCnM">0</b> 个选项，<span id="hintTail">转盘已就绪</span></p>
   </section>
 
   <section class="panel" data-page-node-id="bBPtEqKhM9GmlEwhuBfYjG">
@@ -275,6 +294,7 @@
       <h2 data-page-node-id="DdywXtQfao1M30GcaB9Lwq">选项管理</h2>
       <div style="display:flex;align-items:center;gap:6px" data-page-node-id="IGfs3MPYEHsbkSBuIu90Kn">
         <span class="count" id="countText" data-page-node-id="VQWjph5zTcosOdR5yG2EjH">0 / 20</span>
+        <button class="link-btn" id="bulkBtn" type="button">批量导入</button>
         <button class="link-btn" id="resetBtn" data-page-node-id="xwJsle9UwuFDqzWlaTCqaO">恢复默认</button>
       </div>
     </div>
@@ -282,6 +302,14 @@
     <div class="add-row" data-page-node-id="FszanwrFmbfU2NiyvdiR7o">
       <input id="optInput" type="text" placeholder="输入想吃的，比如：螺蛳粉" maxlength="12" autocomplete="off" data-page-node-id="ydkzM1XOfGEDk3dURKlvKp" />
       <button class="add-btn" id="addBtn" data-page-node-id="iy6CxcXVNbSW7JP9q1brbH">添加</button>
+    </div>
+
+    <div class="bulk" id="bulkBox" hidden>
+      <textarea id="bulkInput" placeholder="一次粘贴多个，用逗号 / 顿号 / 换行分隔&#10;例如：火锅、烧烤、日料、螺蛳粉"></textarea>
+      <div class="bulk-btns">
+        <button class="link-btn" id="bulkCancel" type="button">取消</button>
+        <button class="add-btn" id="bulkOk" type="button">导入</button>
+      </div>
     </div>
 
     <div class="chips" id="chips" data-page-node-id="C5ANGN1plN4BcF90cUBInQ"></div>
@@ -328,6 +356,10 @@
   var resetBtn = document.getElementById('resetBtn');
   var countText = document.getElementById('countText');
   var hintCount = document.getElementById('hintCount');
+  var hintTail = document.getElementById('hintTail');
+  var bulkBtn = document.getElementById('bulkBtn');
+  var bulkBox = document.getElementById('bulkBox');
+  var bulkInput = document.getElementById('bulkInput');
   var mask = document.getElementById('mask');
   var resName = document.getElementById('resName');
   var resSub = document.getElementById('resSub');
@@ -359,13 +391,56 @@
     try { localStorage.setItem(STORE_KEY, JSON.stringify(options)); } catch (e) {}
   }
 
-  function colorOf(i) { return PALETTE[i % PALETTE.length]; }
+  function hashOf(s) {
+    var h = 0;
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 2147483647;
+    return h;
+  }
 
-  function toast(msg) {
-    toastEl.textContent = msg;
+  // 按「名称」而非下标取色 —— 删掉一项时其余扇区颜色不会整体前移洗牌
+  function buildColorMap(list) {
+    var out = [], n = list.length;
+    for (var i = 0; i < n; i++) {
+      var base = hashOf(list[i]) % PALETTE.length;
+      var c = base;
+      for (var k = 0; k < PALETTE.length; k++) {
+        var cand = (base + k) % PALETTE.length;
+        var prev = i > 0 ? out[i - 1] : -1;
+        var first = (n > 2 && i === n - 1) ? out[0] : -1;   // 首尾相邻，也要避开
+        if (cand !== prev && cand !== first) { c = cand; break; }
+      }
+      out.push(c);
+    }
+    return out;
+  }
+
+  var colors = [];
+  function colorOf(i) { return PALETTE[(colors[i] || 0) % PALETTE.length]; }
+
+  function hideToast() { toastEl.classList.remove('show'); }
+
+  function toast(msg, action) {
+    toastEl.textContent = '';
+    var span = document.createElement('span');
+    span.textContent = msg;
+    toastEl.appendChild(span);
+
+    if (action && action.label) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'toast-btn';
+      btn.textContent = action.label;
+      btn.addEventListener('click', function () {
+        clearTimeout(toastTimer);
+        hideToast();
+        action.run();
+      });
+      toastEl.appendChild(btn);
+    }
+
     toastEl.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1800);
+    toastTimer = setTimeout(hideToast, action ? 4200 : 1800);
   }
 
   /* ============ 绘制转盘 ============ */
@@ -378,7 +453,16 @@
   }
 
   function sector(a0, a1) {
-    var p0 = polar(R, a0), p1 = polar(R, a1);
+    var p0 = polar(R, a0);
+    // 整圆（只剩 1 个选项时）：SVG 单段弧起终点重合会被整个忽略，必须拆成两段半圆
+    if (a1 - a0 >= 359.99) {
+      var pm = polar(R, a0 + 180), pe = polar(R, a0 + 359.99);
+      return 'M ' + CX + ' ' + CY +
+             ' L ' + p0[0].toFixed(2) + ' ' + p0[1].toFixed(2) +
+             ' A ' + R + ' ' + R + ' 0 0 1 ' + pm[0].toFixed(2) + ' ' + pm[1].toFixed(2) +
+             ' A ' + R + ' ' + R + ' 0 0 1 ' + pe[0].toFixed(2) + ' ' + pe[1].toFixed(2) + ' Z';
+    }
+    var p1 = polar(R, a1);
     var large = (a1 - a0) > 180 ? 1 : 0;
     return 'M ' + CX + ' ' + CY +
            ' L ' + p0[0].toFixed(2) + ' ' + p0[1].toFixed(2) +
@@ -408,7 +492,8 @@
     var frag = document.createDocumentFragment();
 
     for (var i = 0; i < n; i++) {
-      var a0 = i * seg, a1 = (i + 1) * seg, mid = i * seg + seg / 2;
+      var a0 = i * seg, a1 = (i + 1) * seg;
+      var mid = (n === 1) ? 0 : (i * seg + seg / 2);   // 单项时把文字摆到正上方（指针处）
 
       frag.appendChild(el('path', {
         d: sector(a0, a1),
@@ -419,7 +504,8 @@
 
       var name = options[i];
       var fs = Math.max(7, Math.min(13, 56 / Math.max(1, name.length)));
-      if (n > 16) fs = Math.min(fs, 8.5);
+      if (n === 1) fs = Math.max(11, Math.min(20, 90 / Math.max(1, name.length)));
+      else if (n > 16) fs = Math.min(fs, 8.5);
       else if (n > 12) fs = Math.min(fs, 10);
 
       // 扇区角度从「顶部」顺时针算起，而 SVG rotate() 从「+x 轴」算起 —— 相差 90°
@@ -486,6 +572,7 @@
 
     countText.textContent = options.length + ' / ' + MAX;
     hintCount.textContent = options.length;
+    hintTail.textContent = options.length >= 2 ? '转盘已就绪' : '至少需要 2 个才能抽签';
     addBtn.disabled = options.length >= MAX;
     input.disabled = options.length >= MAX;
     input.placeholder = options.length >= MAX ? '已达上限，先删掉几个吧' : '输入想吃的，比如：螺蛳粉';
@@ -496,7 +583,7 @@
     hubBtn.textContent = options.length >= 2 ? '开始' : '—';
   }
 
-  function renderAll() { drawWheel(); renderChips(); }
+  function renderAll() { colors = buildColorMap(options); drawWheel(); renderChips(); }
 
   function addOption() {
     var name = input.value.trim().replace(/\s+/g, ' ');
@@ -518,7 +605,53 @@
     options.splice(i, 1);
     save();
     renderAll();
-    toast('已删除「' + name + '」');
+    toast('已删除「' + name + '」', {
+      label: '撤销',
+      run: function () {
+        if (options.length >= MAX || options.indexOf(name) !== -1) { toast('没法恢复了，列表已经变了'); return; }
+        options.splice(Math.min(i, options.length), 0, name);
+        save();
+        renderAll();
+        toast('已恢复「' + name + '」');
+      }
+    });
+  }
+
+  /* ============ 批量导入 ============ */
+  function toggleBulk(open) {
+    if (open && spinning) { toast('转盘转完了再改选项吧'); return; }
+    bulkBox.hidden = !open;
+    bulkBtn.textContent = open ? '收起' : '批量导入';
+    if (open) { bulkInput.value = ''; bulkInput.focus(); }
+  }
+
+  function parseBulk(text) {
+    return text.split(/[,，、;；\r\n\t]+/)
+               .map(function (s) { return s.trim().replace(/\s+/g, ' '); })
+               .filter(function (s) { return s.length; })
+               .map(function (s) { return s.slice(0, 12); });
+  }
+
+  function doBulkImport() {
+    var list = parseBulk(bulkInput.value);
+    if (!list.length) { toast('先粘贴点内容进来'); bulkInput.focus(); return; }
+
+    var added = 0, dup = 0, full = false;
+    for (var i = 0; i < list.length; i++) {
+      var name = list[i];
+      if (options.indexOf(name) !== -1) { dup++; continue; }
+      if (options.length >= MAX) { full = true; break; }
+      options.push(name);
+      added++;
+    }
+    save();
+    renderAll();
+    toggleBulk(false);
+
+    var msg = '已导入 ' + added + ' 个选项';
+    if (dup) msg += '，跳过 ' + dup + ' 个重复';
+    if (full) msg += '（已达 ' + MAX + ' 项上限）';
+    toast(msg);
   }
 
   /* ============ 抽签 ============ */
@@ -620,13 +753,32 @@
 
   resetBtn.addEventListener('click', function () {
     if (spinning) return;
+    var backup = options.slice();
+    if (JSON.stringify(backup) === JSON.stringify(DEFAULTS)) { toast('已经是默认选项了'); return; }
+
     options = DEFAULTS.slice();
     save();
     currentRotation = 0;
     wheel.classList.remove('spinning');
     wheel.style.transform = 'rotate(0deg)';
     renderAll();
-    toast('已恢复默认选项');
+    toast('已恢复默认选项', {
+      label: '撤销',
+      run: function () {
+        options = backup;
+        save();
+        renderAll();
+        toast('已还原你的 ' + backup.length + ' 个选项');
+      }
+    });
+  });
+
+  bulkBtn.addEventListener('click', function () { toggleBulk(bulkBox.hidden); });
+  document.getElementById('bulkCancel').addEventListener('click', function () { toggleBulk(false); });
+  document.getElementById('bulkOk').addEventListener('click', doBulkImport);
+  bulkInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { toggleBulk(false); return; }
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doBulkImport(); }
   });
 
   document.getElementById('againBtn').addEventListener('click', function () {
