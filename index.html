@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="DOLZWhzpaAVYzXfy8Ufq9g">
+<head data-page-node-id="l3u7S3BZSDjfeWLqGMyVti">
+<meta charset="UTF-8" data-page-node-id="4wiv8M7UPzcw21oJYELHNt" />
+<meta name="viewport" content="width=device-width, initial-scale=1" data-page-node-id="ShNVuBm5NcdJmk55Fv909n" />
+<title>今天吃什么 · 抽签转盘</title>
+<style>
+  :root{
+    --bg:#f5f6fa;
+    --bg-2:#eef1f8;
+    --card:#ffffff;
+    --ink:#2c3038;
+    --ink-2:#5b6472;
+    --muted:#98a1b3;
+    --line:#eceef4;
+    --brand:#7b83ff;
+    --brand-2:#a78bfa;
+    --accent:#ff9a8b;
+    --radius:20px;
+    --shadow-sm:0 2px 8px rgba(40,45,60,.05);
+    --shadow-md:0 10px 30px rgba(40,45,60,.08);
+    --shadow-lg:0 24px 60px rgba(40,45,60,.14);
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Helvetica Neue",Arial,sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(900px 600px at 12% -10%, #ffe9e2 0%, rgba(255,233,226,0) 60%),
+      radial-gradient(800px 600px at 100% 0%, #e4e7ff 0%, rgba(228,231,255,0) 55%),
+      radial-gradient(700px 500px at 50% 120%, #e2f6ef 0%, rgba(226,246,239,0) 60%),
+      linear-gradient(180deg,var(--bg) 0%, var(--bg-2) 100%);
+    background-attachment:fixed;
+    min-height:100%;
+    display:flex;
+    justify-content:center;
+    padding:32px 16px 56px;
+  }
+
+  .app{width:100%;max-width:520px;display:flex;flex-direction:column;align-items:center;gap:22px}
+
+  /* ---------- header ---------- */
+  .head{text-align:center;margin-top:8px}
+  .head h1{
+    margin:0;font-size:30px;font-weight:800;letter-spacing:2px;
+    background:linear-gradient(120deg,#6f78ff,#a78bfa 45%,#ff9a8b);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .head p{margin:8px 0 0;font-size:14px;color:var(--muted);letter-spacing:1px}
+
+  /* ---------- wheel ---------- */
+  .stage{
+    position:relative;width:100%;background:var(--card);
+    border:1px solid var(--line);border-radius:28px;
+    box-shadow:var(--shadow-md);
+    padding:26px 22px 22px;
+    display:flex;flex-direction:column;align-items:center;
+  }
+  .wheel-wrap{position:relative;width:340px;height:340px;max-width:100%;aspect-ratio:1/1}
+  .wheel{
+    width:100%;height:100%;display:block;
+    filter:drop-shadow(0 12px 26px rgba(60,66,90,.14));
+    transform:rotate(0deg);
+    will-change:transform;
+  }
+  .wheel.spinning{transition:transform 4.6s cubic-bezier(.12,.82,.16,1)}
+  .wheel text{pointer-events:none;user-select:none;font-weight:600}
+
+  .pointer{
+    position:absolute;top:-6px;left:50%;transform:translateX(-50%);
+    width:26px;height:34px;z-index:3;
+    filter:drop-shadow(0 4px 8px rgba(70,75,100,.28));
+  }
+  .hub{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:74px;height:74px;border-radius:50%;border:none;cursor:pointer;
+    background:linear-gradient(140deg,#fff,#f3f4ff);
+    box-shadow:0 6px 18px rgba(60,66,90,.18), inset 0 0 0 5px #fff, inset 0 0 0 6px rgba(123,131,255,.18);
+    color:var(--brand);font-size:15px;font-weight:800;letter-spacing:1px;
+    font-family:inherit;transition:transform .18s ease, box-shadow .18s ease;
+  }
+  .hub:hover{transform:translate(-50%,-50%) scale(1.05)}
+  .hub:active{transform:translate(-50%,-50%) scale(.96)}
+  .hub[disabled]{cursor:not-allowed;opacity:.75}
+
+  .cta{
+    margin-top:18px;width:100%;max-width:280px;height:50px;border:none;border-radius:16px;
+    font-family:inherit;font-size:16px;font-weight:700;letter-spacing:3px;color:#fff;
+    background:linear-gradient(120deg,var(--brand),var(--brand-2));
+    box-shadow:0 10px 22px rgba(123,131,255,.35);
+    cursor:pointer;transition:transform .16s ease, box-shadow .16s ease, opacity .2s ease;
+  }
+  .cta:hover{transform:translateY(-2px);box-shadow:0 14px 28px rgba(123,131,255,.42)}
+  .cta:active{transform:translateY(0)}
+  .cta[disabled]{opacity:.55;cursor:not-allowed;transform:none;box-shadow:0 8px 18px rgba(123,131,255,.2)}
+
+  .hint{margin-top:10px;font-size:12px;color:var(--muted)}
+
+  /* ---------- options panel ---------- */
+  .panel{
+    width:100%;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:18px 18px 16px;
+  }
+  .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .panel-head h2{margin:0;font-size:15px;font-weight:700;letter-spacing:1px}
+  .panel-head .count{font-size:12px;color:var(--muted)}
+  .link-btn{
+    border:none;background:none;font-family:inherit;font-size:12px;color:var(--muted);
+    cursor:pointer;padding:4px 6px;border-radius:8px;transition:color .15s,background .15s;
+  }
+  .link-btn:hover{color:var(--brand);background:#f4f5ff}
+
+  .add-row{display:flex;gap:8px;margin-bottom:14px}
+  .add-row input{
+    flex:1;min-width:0;height:42px;padding:0 14px;font-family:inherit;font-size:14px;color:var(--ink);
+    border:1px solid var(--line);border-radius:12px;background:#fafbfe;outline:none;
+    transition:border-color .18s, background .18s, box-shadow .18s;
+  }
+  .add-row input:focus{border-color:var(--brand);background:#fff;box-shadow:0 0 0 4px rgba(123,131,255,.12)}
+  .add-btn{
+    height:42px;padding:0 18px;border:none;border-radius:12px;cursor:pointer;
+    font-family:inherit;font-size:14px;font-weight:700;color:#fff;
+    background:linear-gradient(120deg,#8f96ff,#7b83ff);
+    box-shadow:0 6px 14px rgba(123,131,255,.28);transition:transform .15s, opacity .15s;
+    white-space:nowrap;
+  }
+  .add-btn:hover{transform:translateY(-1px)}
+  .add-btn:active{transform:translateY(0)}
+  .add-btn[disabled]{opacity:.5;cursor:not-allowed}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{
+    display:inline-flex;align-items:center;gap:7px;
+    padding:7px 8px 7px 12px;border-radius:999px;
+    background:#f7f8fc;border:1px solid var(--line);
+    font-size:13px;color:var(--ink-2);
+    animation:chipIn .25s cubic-bezier(.2,.9,.3,1.2);
+    transition:background .2s, transform .2s, box-shadow .2s;
+  }
+  .chip:hover{background:#f1f2fb}
+  .chip .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .chip .del{
+    width:18px;height:18px;border:none;border-radius:50%;cursor:pointer;flex:none;
+    background:#e6e8f2;color:#7b8494;font-size:12px;line-height:1;
+    display:flex;align-items:center;justify-content:center;padding:0;
+    font-family:inherit;transition:background .15s,color .15s,transform .15s;
+  }
+  .chip .del:hover{background:#ff9a8b;color:#fff;transform:rotate(90deg)}
+  .chip.picked{
+    background:linear-gradient(120deg,#fff0ec,#f2f0ff);
+    border-color:transparent;color:var(--ink);font-weight:700;
+    box-shadow:0 6px 16px rgba(123,131,255,.2);transform:translateY(-2px);
+  }
+  .empty{padding:14px 0;text-align:center;font-size:13px;color:var(--muted)}
+  @keyframes chipIn{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+
+  .foot{font-size:12px;color:var(--muted);text-align:center;line-height:1.7}
+
+  /* ---------- result modal ---------- */
+  .mask{
+    position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
+    background:rgba(40,44,60,.34);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+    opacity:0;pointer-events:none;transition:opacity .28s ease;padding:20px;
+  }
+  .mask.show{opacity:1;pointer-events:auto}
+  .result-card{
+    position:relative;z-index:2;width:100%;max-width:330px;background:var(--card);
+    border-radius:26px;padding:34px 26px 26px;text-align:center;
+    box-shadow:var(--shadow-lg);
+    transform:scale(.78) translateY(14px);opacity:0;
+    transition:transform .46s cubic-bezier(.16,1.1,.3,1), opacity .3s ease;
+  }
+  .mask.show .result-card{transform:scale(1) translateY(0);opacity:1}
+  .result-card::before{
+    content:"";position:absolute;inset:-1px;border-radius:26px;pointer-events:none;
+    background:linear-gradient(140deg,rgba(123,131,255,.5),rgba(255,154,139,.45),rgba(167,139,250,.4));
+    -webkit-mask:linear-gradient(#000,#000) content-box,linear-gradient(#000,#000);
+    -webkit-mask-composite:xor;mask-composite:exclude;padding:1px;
+  }
+  .emoji{
+    width:76px;height:76px;margin:0 auto 16px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:36px;
+    background:linear-gradient(140deg,#fff2ee,#eef0ff);
+    box-shadow:0 8px 20px rgba(123,131,255,.18);
+    animation:pop .6s cubic-bezier(.2,1.4,.35,1) .1s both;
+  }
+  .result-card .label{font-size:12px;letter-spacing:4px;color:var(--muted);margin-bottom:8px}
+  .result-card .name{
+    font-size:30px;font-weight:800;letter-spacing:2px;line-height:1.3;word-break:break-all;
+    background:linear-gradient(120deg,#6f78ff,#a78bfa 50%,#ff9a8b);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    animation:pop .6s cubic-bezier(.2,1.4,.35,1) .18s both;
+  }
+  .result-card .sub{margin-top:10px;font-size:12px;color:var(--muted);animation:pop .6s ease .26s both}
+  .result-btns{display:flex;gap:10px;margin-top:24px;animation:pop .5s ease .32s both}
+  .result-btns button{
+    flex:1;height:44px;border-radius:14px;border:none;cursor:pointer;
+    font-family:inherit;font-size:14px;font-weight:700;transition:transform .15s, box-shadow .15s;
+  }
+  .btn-again{background:#f2f3fb;color:var(--ink-2)}
+  .btn-again:hover{background:#e9eaf7;transform:translateY(-2px)}
+  .btn-ok{color:#fff;background:linear-gradient(120deg,var(--brand),var(--brand-2));box-shadow:0 8px 18px rgba(123,131,255,.32)}
+  .btn-ok:hover{transform:translateY(-2px);box-shadow:0 12px 24px rgba(123,131,255,.4)}
+  @keyframes pop{from{opacity:0;transform:scale(.7) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+
+  .ring{
+    position:absolute;top:34px;left:50%;width:76px;height:76px;margin-left:-38px;
+    border-radius:50%;border:2px solid rgba(123,131,255,.5);z-index:1;
+    animation:ring 1.1s ease-out .1s 2 both;pointer-events:none;
+  }
+  @keyframes ring{0%{transform:scale(.9);opacity:.8}100%{transform:scale(1.9);opacity:0}}
+
+  /* ---------- confetti ---------- */
+  .confetti{position:fixed;inset:0;z-index:90;pointer-events:none;overflow:hidden}
+  .piece{
+    position:absolute;left:50%;top:44%;width:9px;height:14px;border-radius:2px;
+    opacity:0;animation:fly var(--dur) cubic-bezier(.15,.7,.4,1) var(--delay) forwards;
+  }
+  @keyframes fly{
+    0%{opacity:1;transform:translate(-50%,-50%) rotate(0deg) scale(.6)}
+    70%{opacity:1}
+    100%{opacity:0;transform:translate(calc(-50% + var(--tx)),calc(-50% + var(--ty))) rotate(var(--rot)) scale(1)}
+  }
+
+  /* ---------- toast ---------- */
+  .toast{
+    position:fixed;left:50%;bottom:38px;transform:translate(-50%,20px);
+    background:rgba(44,48,56,.92);color:#fff;font-size:13px;padding:10px 18px;border-radius:12px;
+    box-shadow:var(--shadow-md);opacity:0;pointer-events:none;z-index:120;
+    transition:opacity .25s ease, transform .25s ease;white-space:nowrap;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+
+  @media (max-width:420px){
+    .head h1{font-size:26px}
+    .wheel-wrap{width:300px;height:300px}
+    .stage{padding:20px 14px 18px}
+  }
+</style>
+</head>
+<body data-page-node-id="47jVNE7oiqcsMENhLmA0Xq">
+
+<div class="app" data-page-node-id="Qvqd9rONHeC0IxEHvA6kZU">
+  <header class="head" data-page-node-id="vrZLANAQub10MIPK2Xl5MH">
+    <h1 data-page-node-id="IiljasMvfYCp31y31Iblub">今天吃什么</h1>
+    <p data-page-node-id="Ft7c9QZsbeRgcQnTIJkoSO">选择困难症的终结者 · 转盘替你做决定</p>
+  </header>
+
+  <section class="stage" data-page-node-id="i4ZkEjn7CjFhPaCDPF4tAZ">
+    <div class="wheel-wrap" data-page-node-id="F2frWHwYqF30NOoXoB7ohZ">
+      <svg class="pointer" viewBox="0 0 26 34" aria-hidden="true" data-page-node-id="ndGf5ti7Ltbt8gZ0wthNZV">
+        <defs data-page-node-id="IkWDq2HDaALvJyLQ83W6ID">
+          <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1" data-page-node-id="GtJ718kdsGvTP7w4MAdv5x">
+            <stop offset="0%" stop-color="#ff9a8b" data-page-node-id="CvUfyJpArY7e1eGXbN6N3n"/><stop offset="100%" stop-color="#f0716a" data-page-node-id="PfbdJrXM2w5r35tuqjdY2d"/>
+          </linearGradient>
+        </defs>
+        <path d="M13 34 L1.5 8 A12.4 12.4 0 0 1 24.5 8 Z" fill="url(#pg)" data-page-node-id="ax82BsOHRgE5vPToTl9eDG"/>
+        <circle cx="13" cy="9" r="4.2" fill="#fff" data-page-node-id="xXDZe6Pt3wuMBn1zPsOqkJ"/>
+      </svg>
+
+      <svg class="wheel" id="wheel" viewBox="0 0 200 200" aria-label="美食转盘" data-page-node-id="FMEdfQjQTj0dXYU0M0D0QJ"></svg>
+
+      <button class="hub" id="hubBtn" title="开始抽取" data-page-node-id="WK3jejkODPXPdgS7xutA0j">开始</button>
+    </div>
+
+    <button class="cta" id="spinBtn" data-page-node-id="sjsjaPUQdxuHdRzHGyvBHd">开始抽取</button>
+    <p class="hint" id="hint" data-page-node-id="AtI8cIQe7AR0OXD8xqflfB">共 <b id="hintCount" data-page-node-id="kV4NwUlZf3TdwsWXj6sCnM">0</b> 个选项，转盘已就绪</p>
+  </section>
+
+  <section class="panel" data-page-node-id="bBPtEqKhM9GmlEwhuBfYjG">
+    <div class="panel-head" data-page-node-id="TVy98wgd8upWjua340Gc5C">
+      <h2 data-page-node-id="DdywXtQfao1M30GcaB9Lwq">选项管理</h2>
+      <div style="display:flex;align-items:center;gap:6px" data-page-node-id="IGfs3MPYEHsbkSBuIu90Kn">
+        <span class="count" id="countText" data-page-node-id="VQWjph5zTcosOdR5yG2EjH">0 / 20</span>
+        <button class="link-btn" id="resetBtn" data-page-node-id="xwJsle9UwuFDqzWlaTCqaO">恢复默认</button>
+      </div>
+    </div>
+
+    <div class="add-row" data-page-node-id="FszanwrFmbfU2NiyvdiR7o">
+      <input id="optInput" type="text" placeholder="输入想吃的，比如：螺蛳粉" maxlength="12" autocomplete="off" data-page-node-id="ydkzM1XOfGEDk3dURKlvKp" />
+      <button class="add-btn" id="addBtn" data-page-node-id="iy6CxcXVNbSW7JP9q1brbH">添加</button>
+    </div>
+
+    <div class="chips" id="chips" data-page-node-id="C5ANGN1plN4BcF90cUBInQ"></div>
+  </section>
+
+  <p class="foot" data-page-node-id="ZLaBRRUUgJMOmAq0HUgJhH">选项自动保存在本机浏览器中 · 刷新不会丢失<br data-page-node-id="9tYBzhHQ7rRlu8k6Dv8GDU"/>转盘结果仅供参考，饿极了请直接点外卖 🍜</p>
+</div>
+
+<div class="mask" id="mask" data-page-node-id="cfcGb6zpHqTxhwutKTb6ud">
+  <div class="confetti" id="confetti" data-page-node-id="tPbreG1fUN1zDhIwjgG4Co"></div>
+  <div class="result-card" id="resultCard" data-page-node-id="tPBik2Qmo4DvKfpNBl9LLv">
+    <div class="ring" id="ring" data-page-node-id="G5HyXpzZGvTEkoPTq8ckxa"></div>
+    <div class="emoji" id="resEmoji" data-page-node-id="qApqPhLFCVN1KyDeoHJkS8">🍽️</div>
+    <div class="label" data-page-node-id="3kC6c88RqnYLtuHrbqlb38">今 天 就 吃</div>
+    <div class="name" id="resName" data-page-node-id="Ji8TGpMsyyjTD772ByDLhe">麻辣烫</div>
+    <div class="sub" id="resSub" data-page-node-id="RnZiwHMQqR6aariwAGaeSi">已帮你排除其他 9 个选项</div>
+    <div class="result-btns" data-page-node-id="1Ji7xvGvgCuZbwSvbA2lOw">
+      <button class="btn-again" id="againBtn" data-page-node-id="z3kXcGajD8dyoMTKGJj8wi">再抽一次</button>
+      <button class="btn-ok" id="okBtn" data-page-node-id="4SXl1Fn42bA1hTn2N1LQ5y">就这个了</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" data-page-node-id="vXvrctIZgKWRC8jRRGVyft"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============ 配置 ============ */
+  var STORE_KEY = 'what-to-eat:options:v1';
+  var MAX = 20;
+  var DEFAULTS = ['食堂', '麦当劳', '麻辣烫', '轻食沙拉', '牛肉面', '黄焖鸡', '火锅', '日料寿司', '沙县小吃', '盖浇饭'];
+  var PALETTE = ['#FFD9C0','#FAEDCB','#C9E4C5','#B7D7E8','#D6CBE8','#F7C8D8','#FFE3A3','#C7E9E4','#E3D5F5','#FBD5A5','#FCD5CE','#D9E7FF'];
+  var EMOJIS = ['🍜','🍔','🍲','🥗','🍚','🍗','🍣','🥘','🍱','🌮','🍕','🥪','🍝','🍤','🥩','🍛'];
+
+  /* ============ DOM ============ */
+  var wheel = document.getElementById('wheel');
+  var spinBtn = document.getElementById('spinBtn');
+  var hubBtn = document.getElementById('hubBtn');
+  var chipsBox = document.getElementById('chips');
+  var input = document.getElementById('optInput');
+  var addBtn = document.getElementById('addBtn');
+  var resetBtn = document.getElementById('resetBtn');
+  var countText = document.getElementById('countText');
+  var hintCount = document.getElementById('hintCount');
+  var mask = document.getElementById('mask');
+  var resName = document.getElementById('resName');
+  var resSub = document.getElementById('resSub');
+  var resEmoji = document.getElementById('resEmoji');
+  var confettiBox = document.getElementById('confetti');
+  var toastEl = document.getElementById('toast');
+
+  /* ============ 状态 ============ */
+  var options = load();
+  var spinning = false;
+  var currentRotation = 0;
+  var toastTimer = null;
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return DEFAULTS.slice();
+      var arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return DEFAULTS.slice();
+      var clean = arr.filter(function (s) { return typeof s === 'string' && s.trim(); })
+                     .map(function (s) { return s.trim().slice(0, 12); });
+      return clean.length ? clean.slice(0, MAX) : DEFAULTS.slice();
+    } catch (e) {
+      return DEFAULTS.slice();
+    }
+  }
+
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(options)); } catch (e) {}
+  }
+
+  function colorOf(i) { return PALETTE[i % PALETTE.length]; }
+
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1800);
+  }
+
+  /* ============ 绘制转盘 ============ */
+  var NS = 'http://www.w3.org/2000/svg';
+  var CX = 100, CY = 100, R = 96;
+
+  function polar(r, deg) {
+    var a = (deg - 90) * Math.PI / 180;
+    return [CX + r * Math.cos(a), CY + r * Math.sin(a)];
+  }
+
+  function sector(a0, a1) {
+    var p0 = polar(R, a0), p1 = polar(R, a1);
+    var large = (a1 - a0) > 180 ? 1 : 0;
+    return 'M ' + CX + ' ' + CY +
+           ' L ' + p0[0].toFixed(2) + ' ' + p0[1].toFixed(2) +
+           ' A ' + R + ' ' + R + ' 0 ' + large + ' 1 ' + p1[0].toFixed(2) + ' ' + p1[1].toFixed(2) + ' Z';
+  }
+
+  function el(name, attrs) {
+    var node = document.createElementNS(NS, name);
+    for (var k in attrs) { if (attrs.hasOwnProperty(k)) node.setAttribute(k, attrs[k]); }
+    return node;
+  }
+
+  function drawWheel() {
+    wheel.innerHTML = '';
+    var n = options.length;
+
+    if (n === 0) {
+      wheel.appendChild(el('circle', { cx: CX, cy: CY, r: R, fill: '#f2f3f8', stroke: '#e6e8f0', 'stroke-width': 2 }));
+      var t = el('text', { x: CX, y: CY + 5, 'text-anchor': 'middle', fill: '#a8b0c0', 'font-size': 9 });
+      t.textContent = '还没有选项';
+      wheel.appendChild(t);
+      wheel.style.transform = 'rotate(' + currentRotation + 'deg)';
+      return;
+    }
+
+    var seg = 360 / n;
+    var frag = document.createDocumentFragment();
+
+    for (var i = 0; i < n; i++) {
+      var a0 = i * seg, a1 = (i + 1) * seg, mid = i * seg + seg / 2;
+
+      frag.appendChild(el('path', {
+        d: sector(a0, a1),
+        fill: colorOf(i),
+        stroke: '#ffffff',
+        'stroke-width': n > 14 ? 0.8 : 1.4
+      }));
+
+      var name = options[i];
+      var fs = Math.max(7, Math.min(13, 56 / Math.max(1, name.length)));
+      if (n > 16) fs = Math.min(fs, 8.5);
+      else if (n > 12) fs = Math.min(fs, 10);
+
+      // 扇区角度从「顶部」顺时针算起，而 SVG rotate() 从「+x 轴」算起 —— 相差 90°
+      // 下半圈（mid > 180）额外翻转 180°，避免文字倒置
+      var flip = mid > 180;
+      var theta = flip ? mid + 90 : mid - 90;
+      var tx = R - 11;
+
+      var g = el('g', { transform: 'translate(' + CX + ',' + CY + ') rotate(' + theta.toFixed(2) + ')' });
+      var txt = el('text', {
+        x: flip ? -tx : tx, y: 0, dy: '0.35em',
+        'text-anchor': flip ? 'start' : 'end',
+        'font-size': fs.toFixed(1),
+        fill: '#3a3f4b'
+      });
+      txt.textContent = name;
+      g.appendChild(txt);
+      frag.appendChild(g);
+    }
+
+    // 外圈 + 中心留白
+    frag.appendChild(el('circle', { cx: CX, cy: CY, r: R, fill: 'none', stroke: '#fff', 'stroke-width': 5 }));
+    frag.appendChild(el('circle', { cx: CX, cy: CY, r: R - 2.5, fill: 'none', stroke: 'rgba(0,0,0,.05)', 'stroke-width': 1 }));
+
+    wheel.appendChild(frag);
+    wheel.style.transform = 'rotate(' + currentRotation + 'deg)';
+  }
+
+  /* ============ 选项列表 ============ */
+  function renderChips() {
+    chipsBox.innerHTML = '';
+
+    if (!options.length) {
+      var empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = '选项空空如也，添加一个再抽签吧';
+      chipsBox.appendChild(empty);
+    } else {
+      options.forEach(function (name, i) {
+        var chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.dataset.index = i;
+
+        var dot = document.createElement('i');
+        dot.className = 'dot';
+        dot.style.background = colorOf(i);
+
+        var label = document.createElement('span');
+        label.textContent = name;
+
+        var del = document.createElement('button');
+        del.className = 'del';
+        del.type = 'button';
+        del.title = '删除';
+        del.textContent = '×';
+        del.addEventListener('click', function () { removeOption(i); });
+
+        chip.appendChild(dot);
+        chip.appendChild(label);
+        chip.appendChild(del);
+        chipsBox.appendChild(chip);
+      });
+    }
+
+    countText.textContent = options.length + ' / ' + MAX;
+    hintCount.textContent = options.length;
+    addBtn.disabled = options.length >= MAX;
+    input.disabled = options.length >= MAX;
+    input.placeholder = options.length >= MAX ? '已达上限，先删掉几个吧' : '输入想吃的，比如：螺蛳粉';
+
+    var ready = !spinning && options.length >= 2;
+    spinBtn.disabled = !ready;
+    hubBtn.disabled = !ready;
+    hubBtn.textContent = options.length >= 2 ? '开始' : '—';
+  }
+
+  function renderAll() { drawWheel(); renderChips(); }
+
+  function addOption() {
+    var name = input.value.trim().replace(/\s+/g, ' ');
+    if (!name) { toast('先输入一个美食名字'); input.focus(); return; }
+    if (name.length > 12) name = name.slice(0, 12);
+    if (options.length >= MAX) { toast('最多只能有 ' + MAX + ' 个选项'); return; }
+    if (options.indexOf(name) !== -1) { toast('「' + name + '」已经在列表里了'); input.select(); return; }
+    options.push(name);
+    save();
+    renderAll();
+    input.value = '';
+    input.focus();
+    toast('已添加「' + name + '」');
+  }
+
+  function removeOption(i) {
+    if (spinning) { toast('转盘转完了再改选项吧'); return; }
+    var name = options[i];
+    options.splice(i, 1);
+    save();
+    renderAll();
+    toast('已删除「' + name + '」');
+  }
+
+  /* ============ 抽签 ============ */
+  function spin() {
+    if (spinning) return;
+    if (options.length < 2) { toast('至少需要 2 个选项才能抽签'); return; }
+
+    spinning = true;
+    spinBtn.disabled = true;
+    hubBtn.disabled = true;
+    hubBtn.textContent = '···';
+    spinBtn.textContent = '抽取中';
+
+    var n = options.length;
+    var index = Math.floor(Math.random() * n);
+    var seg = 360 / n;
+    var mid = index * seg + seg / 2;          // 目标扇区中心（从顶点顺时针）
+    var turns = 5 + Math.floor(Math.random() * 2);
+    var target = turns * 360 + (360 - mid);   // 让目标中心转到顶部指针处
+    currentRotation += target;
+
+    wheel.classList.add('spinning');
+    wheel.getBoundingClientRect();   // 强制重排，确保 transition 生效（SVG 无 offsetWidth）
+    wheel.style.transform = 'rotate(' + currentRotation + 'deg)';
+
+    var done = false;
+    function finish() {
+      if (done) return;
+      done = true;
+      wheel.removeEventListener('transitionend', onEnd);
+      clearTimeout(safety);
+      spinning = false;
+      spinBtn.textContent = '开始抽取';
+      renderChips();
+      showResult(index);
+    }
+    function onEnd(e) { if (e.propertyName === 'transform') finish(); }
+    wheel.addEventListener('transitionend', onEnd);
+    var safety = setTimeout(finish, 5200);  // 兜底：动画事件丢失时也能出结果
+  }
+
+  function showResult(index) {
+    var name = options[index];
+    resName.textContent = name;
+    resSub.textContent = '已帮你排除其他 ' + Math.max(0, options.length - 1) + ' 个选项';
+    resEmoji.textContent = EMOJIS[index % EMOJIS.length];
+    mask.classList.add('show');
+    celebrate();
+
+    // 高亮对应标签
+    var chip = chipsBox.querySelector('.chip[data-index="' + index + '"]');
+    if (chip) {
+      chip.classList.add('picked');
+      setTimeout(function () { chip.classList.remove('picked'); }, 3200);
+    }
+  }
+
+  function closeResult() {
+    mask.classList.remove('show');
+    setTimeout(function () { confettiBox.innerHTML = ''; }, 400);
+  }
+
+  /* ============ 庆祝彩带 ============ */
+  var CONFETTI_COLORS = ['#7b83ff', '#a78bfa', '#ff9a8b', '#ffd166', '#6fd3c7', '#f7a8c4'];
+
+  function celebrate() {
+    confettiBox.innerHTML = '';
+    var frag = document.createDocumentFragment();
+
+    for (var i = 0; i < 56; i++) {
+      var p = document.createElement('i');
+      p.className = 'piece';
+      var angle = Math.random() * Math.PI * 2;
+      var dist = 90 + Math.random() * 190;
+      p.style.setProperty('--tx', (Math.cos(angle) * dist).toFixed(1) + 'px');
+      p.style.setProperty('--ty', (Math.sin(angle) * dist + 120 + Math.random() * 90).toFixed(1) + 'px');
+      p.style.setProperty('--rot', (Math.random() * 900 - 450).toFixed(0) + 'deg');
+      p.style.setProperty('--dur', (0.9 + Math.random() * 0.9).toFixed(2) + 's');
+      p.style.setProperty('--delay', (Math.random() * 0.22).toFixed(2) + 's');
+      p.style.background = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+      if (Math.random() > 0.6) { p.style.borderRadius = '50%'; p.style.height = p.style.width; }
+      var w = 6 + Math.random() * 6;
+      p.style.width = w.toFixed(1) + 'px';
+      frag.appendChild(p);
+    }
+    confettiBox.appendChild(frag);
+    setTimeout(function () { confettiBox.innerHTML = ''; }, 2400);
+  }
+
+  /* ============ 事件绑定 ============ */
+  spinBtn.addEventListener('click', spin);
+  hubBtn.addEventListener('click', spin);
+  addBtn.addEventListener('click', addOption);
+  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') addOption(); });
+
+  resetBtn.addEventListener('click', function () {
+    if (spinning) return;
+    options = DEFAULTS.slice();
+    save();
+    currentRotation = 0;
+    wheel.classList.remove('spinning');
+    wheel.style.transform = 'rotate(0deg)';
+    renderAll();
+    toast('已恢复默认选项');
+  });
+
+  document.getElementById('againBtn').addEventListener('click', function () {
+    closeResult();
+    setTimeout(spin, 260);
+  });
+  document.getElementById('okBtn').addEventListener('click', closeResult);
+  mask.addEventListener('click', function (e) { if (e.target === mask || e.target === confettiBox) closeResult(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && mask.classList.contains('show')) closeResult(); });
+
+  /* ============ 启动 ============ */
+  renderAll();
+})();
+</script>
+</body>
+</html>
